@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Diário de Cefaleias</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif; background: #f9fafb; color: #111827; }
+        .container { max-width: 1200px; margin: 0 auto; padding: 1rem; }
+        .header { margin-bottom: 2rem; }
+        .header h1 { font-size: 2rem; font-weight: 300; color: #111827; margin-bottom: 0.5rem; }
+        .header p { color: #6b7280; }
+        .tabs { display: flex; gap: 0.5rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .tab { padding: 0.75rem 1rem; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.95rem; background: white; color: #4b5563; transition: all 0.2s; }
+        .tab.active { background: #111827; color: white; }
+        .tab:hover:not(.active) { background: #f3f4f6; }
+        .btn { padding: 0.75rem 1.5rem; border: none; border-radius: 0.5rem; cursor: pointer; font-size: 0.95rem; transition: all 0.2s; }
+        .btn-primary { background: #111827; color: white; }
+        .btn-primary:hover { background: #1f2937; }
+        .btn-secondary { background: #f3f4f6; color: #374151; }
+        .btn-secondary:hover { background: #e5e7eb; }
+        .btn-danger { background: #fee; color: #dc2626; border: 1px solid #fecaca; }
+        .card { background: white; border-radius: 0.75rem; padding: 1.5rem; margin-bottom: 1rem; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group label { display: block; font-size: 0.9rem; font-weight: 500; color: #374151; margin-bottom: 0.5rem; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; font-size: 1rem; }
+        .form-group input:focus, .form-group textarea:focus { outline: none; border-color: #111827; }
+        .grid-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1rem; }
+        .button-group { display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem; margin-top: 0.5rem; }
+        .button-group button { padding: 0.75rem; border: 1px solid #d1d5db; border-radius: 0.5rem; background: white; cursor: pointer; font-size: 0.9rem; transition: all 0.2s; }
+        .button-group button.selected { background: #111827; color: white; border-color: #111827; }
+        .button-group button:hover:not(.selected) { border-color: #9ca3af; }
+        .intensity-slider { width: 100%; }
+        .intensity-label { text-align: center; margin-top: 0.5rem; font-weight: 500; }
+        .entry { border: 1px solid #e5e7eb; border-radius: 0.5rem; padding: 1rem; margin-bottom: 1rem; }
+        .entry-header { display: flex; justify-content: space-between; align-items: start; margin-bottom: 1rem; }
+        .entry-title { font-weight: 500; font-size: 1.1rem; }
+        .entry-time { color: #6b7280; font-size: 0.9rem; }
+        .entry-detail { margin: 0.5rem 0; font-size: 0.9rem; }
+        .entry-detail strong { color: #374151; }
+        .badge { display: inline-block; padding: 0.25rem 0.75rem; border-radius: 1rem; font-size: 0.85rem; margin: 0.25rem; }
+        .badge-location { background: #f3f4f6; color: #4b5563; }
+        .badge-low { background: #d1fae5; color: #065f46; }
+        .badge-medium { background: #fed7aa; color: #92400e; }
+        .badge-high { background: #fee2e2; color: #991b1b; }
+        .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1rem; margin-bottom: 1.5rem; }
+        .stat-card { background: white; border-radius: 0.5rem; padding: 1.5rem; text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.1); }
+        .stat-value { font-size: 2rem; font-weight: bold; color: #111827; }
+        .stat-label { font-size: 0.9rem; color: #6b7280; margin-top: 0.5rem; }
+        .bar-chart { margin: 1rem 0; }
+        .bar-item { margin-bottom: 1rem; }
+        .bar-label { display: flex; justify-content: space-between; font-size: 0.9rem; margin-bottom: 0.5rem; }
+        .bar-bg { height: 0.5rem; background: #f3f4f6; border-radius: 0.25rem; overflow: hidden; }
+        .bar-fill { height: 100%; background: #111827; transition: width 0.3s; }
+        .week-nav { display: flex; align-items: center; gap: 1rem; margin-bottom: 1.5rem; flex-wrap: wrap; }
+        .week-nav .center { flex: 1; text-align: center; }
+        .hidden { display: none; }
+        .empty-state { text-align: center; padding: 3rem 1rem; color: #9ca3af; }
+        .empty-state svg { margin: 0 auto 1rem; }
+        @media (max-width: 768px) {
+            .stats { grid-template-columns: 1fr; }
+            .grid-2 { grid-template-columns: 1fr; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🧠 Diário de Cefaleias</h1>
+            <p>Regista e acompanha as tuas cefaleias</p>
+        </div>
+
+        <div class="tabs">
+            <button class="tab active" onclick="switchView('list')">📋 Registos</button>
+            <button class="tab" onclick="switchView('weekly')">📊 Semanal</button>
+            <button class="tab" onclick="switchView('monthly')">📄 Mensal</button>
+        </div>
+
+        <div id="listView">
+            <button class="btn btn-primary" style="width:100%; margin-bottom:1.5rem;" onclick="showForm()">+ Registar Nova Cefaleia</button>
+            
+            <div id="formCard" class="card hidden">
+                <h2 style="margin-bottom:1.5rem;">Nova Cefaleia</h2>
+                <form id="entryForm" onsubmit="saveEntry(event)">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Data</label>
+                            <input type="date" id="date" required>
+                        </div>
+                        <div class="form-group">
+                            <label>Hora</label>
+                            <input type="time" id="time" required>
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Localização *</label>
+                        <div class="button-group" id="locationButtons"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Intensidade: <span id="intensityValue">5</span>/10 (<span id="intensityLabel">Moderada</span>)</label>
+                        <input type="range" min="1" max="10" value="5" id="intensity" class="intensity-slider" oninput="updateIntensity()">
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Horas de Sono</label>
+                            <input type="number" step="0.5" id="sleepHours" placeholder="ex: 7.5">
+                        </div>
+                        <div class="form-group">
+                            <label>Duração</label>
+                            <input type="text" id="duration" placeholder="ex: 2 horas">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Medicamentos</label>
+                        <input type="text" id="medications" placeholder="ex: Paracetamol 1g">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Sintomas Associados</label>
+                        <div class="button-group" id="symptomButtons"></div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fatores de Alívio</label>
+                        <textarea id="reliefFactors" rows="2" placeholder="ex: Deitar no escuro"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Fatores de Agravamento</label>
+                        <textarea id="aggravatingFactors" rows="2" placeholder="ex: Luz forte"></textarea>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Notas</label>
+                        <textarea id="notes" rows="3" placeholder="Observações..."></textarea>
+                    </div>
+
+                    <div class="grid-2">
+                        <button type="submit" class="btn btn-primary">Guardar</button>
+                        <button type="button" class="btn btn-secondary" onclick="hideForm()">Cancelar</button>
+                    </div>
+                </form>
+            </div>
+
+            <div id="entriesList"></div>
+        </div>
+
+        <div id="weeklyView" class="hidden"></div>
+        <div id="monthlyView" class="hidden"></div>
+    </div>
+
+    <script>
+        const locations = ['Frontal', 'Temporal Direito', 'Temporal Esquerdo', 'Occipital', 'Parietal', 'Difusa'];
+        const symptoms = ['Náuseas', 'Vómitos', 'Fotofobia', 'Fonofobia', 'Tonturas', 'Visão turva'];
+        let entries = JSON.parse(localStorage.getItem('headacheEntries') || '[]');
+        let selectedLocations = [];
+        let selectedSymptoms = [];
+        let currentView = 'list';
+        let currentWeek = getWeekStart(new Date());
+        let currentMonth = new Date().toISOString().slice(0, 7);
+
+        function init() {
+            const today = new Date().toISOString().slice(0, 10);
+            const now = new Date().toTimeString().slice(0, 5);
+            document.getElementById('date').value = today;
+            document.getElementById('time').value = now;
+            
+            const locBtns = document.getElementById('locationButtons');
+            locations.forEach(loc => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = loc;
+                btn.onclick = () => toggleSelection(loc, 'location');
+                locBtns.appendChild(btn);
+            });
+
+            const sympBtns = document.getElementById('symptomButtons');
+            symptoms.forEach(symp => {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.textContent = symp;
+                btn.onclick = () => toggleSelection(symp, 'symptom');
+                sympBtns.appendChild(btn);
+            });
+
+            renderEntries();
+        }
+
+        function toggleSelection(item, type) {
+            const arr = type === 'location' ? selectedLocations : selectedSymptoms;
+            const idx = arr.indexOf(item);
+            if (idx > -1) arr.splice(idx, 1);
+            else arr.push(item);
+
+            const btns = document.getElementById(type === 'location' ? 'locationButtons' : 'symptomButtons').children;
+            Array.from(btns).forEach(btn => {
+                if (btn.textContent === item) {
+                    btn.classList.toggle('selected');
+                }
+            });
+        }
+
+        function updateIntensity() {
+            const val = document.getElementById('intensity').value;
+            document.getElementById('intensityValue').textContent = val;
+            let label = 'Leve';
+            if (val >= 7) label = 'Intensa';
+            else if (val >= 4) label = 'Moderada';
+            document.getElementById('intensityLabel').textContent = label;
+        }
+
+        function showForm() {
+            document.getElementById('formCard').classList.remove('hidden');
+        }
+
+        function hideForm() {
+            document.getElementById('formCard').classList.add('hidden');
+            document.getElementById('entryForm').reset();
+            selectedLocations = [];
+            selectedSymptoms = [];
+            document.querySelectorAll('.button-group button').forEach(btn => btn.classList.remove('selected'));
+            const today = new Date().toISOString().slice(0, 10);
+            const now = new Date().toTimeString().slice(0, 5);
+            document.getElementById('date').value = today;
+            document.getElementById('time').value = now;
+            document.getElementById('intensity').value = 5;
+            updateIntensity();
+        }
+
+        function saveEntry(e) {
+            e.preventDefault();
+            if (selectedLocations.length === 0) {
+                alert('Seleciona pelo menos uma localização');
+                return;
+            }
+
+            const entry = {
+                id: Date.now(),
+                date: document.getElementById('date').value,
+                time: document.getElementById('time').value,
+                location: [...selectedLocations],
+                intensity: parseInt(document.getElementById('intensity').value),
+                sleepHours: document.getElementById('sleepHours').value,
+                duration: document.getElementById('duration').value,
+                medications: document.getElementById('medications').value,
+                symptoms: [...selectedSymptoms],
+                reliefFactors: document.getElementById('reliefFactors').value,
+                aggravatingFactors: document.getElementById('aggravatingFactors').value,
+                notes: document.getElementById('notes').value
+            };
+
+            entries.unshift(entry);
+            localStorage.setItem('headacheEntries', JSON.stringify(entries));
+            hideForm();
+            renderEntries();
+        }
+
+        function deleteEntry(id) {
+            if (confirm('Eliminar este registo?')) {
+                entries = entries.filter(e => e.id !== id);
+                localStorage.setItem('headacheEntries', JSON.stringify(entries));
+                renderEntries();
+            }
+        }
+
+        function getIntensityClass(intensity) {
+            if (intensity >= 7) return 'badge-high';
+            if (intensity >= 4) return 'badge-medium';
+            return 'badge-low';
+        }
+
+        function getIntensityLabel(intensity) {
+            if (intensity >= 7) return 'Intensa';
+            if (intensity >= 4) return 'Moderada';
+            return 'Leve';
+        }
+
+        function renderEntries() {
+            const list = document.getElementById('entriesList');
+            if (entries.length === 0) {
+                list.innerHTML = '<div class="empty-state"><p>Ainda não tens registos</p></div>';
+                return;
+            }
+
+            list.innerHTML = entries.map(e => `
+                <div class="entry">
+                    <div class="entry-header">
+                        <div>
+                            <div class="entry-title">${new Date(e.date).toLocaleDateString('pt-PT', {weekday:'long',day:'numeric',month:'long',year:'numeric'})}</div>
+                            <div class="entry-time">${e.time}</div>
+                            <div style="margin-top:0.5rem;">
+                                ${e.location.map(loc => `<span class="badge badge-location">${loc}</span>`).join('')}
+                            </div>
+                        </div>
+                        <button class="btn-danger" onclick="deleteEntry(${e.id})" style="padding:0.5rem 1rem;">✕</button>
+                    </div>
+                    <div class="entry-detail">
+                        <strong>Intensidade:</strong> 
+                        <span class="badge ${getIntensityClass(e.intensity)}">${e.intensity}/10 - ${getIntensityLabel(e.intensity)}</span>
+                    </div>
+                    ${e.sleepHours ? `<div class="entry-detail"><strong>Sono:</strong> ${e.sleepHours}h</div>` : ''}
+                    ${e.duration ? `<div class="entry-detail"><strong>Duração:</strong> ${e.duration}</div>` : ''}
+                    ${e.medications ? `<div class="entry-detail"><strong>Medicamentos:</strong> ${e.medications}</div>` : ''}
+                    ${e.symptoms.length > 0 ? `<div class="entry-detail"><strong>Sintomas:</strong> ${e.symptoms.join(', ')}</div>` : ''}
+                    ${e.reliefFactors ? `<div class="entry-detail"><strong>Alívio:</strong> ${e.reliefFactors}</div>` : ''}
+                    ${e.aggravatingFactors ? `<div class="entry-detail"><strong>Agravamento:</strong> ${e.aggravatingFactors}</div>` : ''}
+                    ${e.notes ? `<div class="entry-detail"><strong>Notas:</strong> ${e.notes}</div>` : ''}
+                </div>
+            `).join('');
+        }
+
+        function switchView(view) {
+            currentView = view;
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+
+            document.getElementById('listView').classList.add('hidden');
+            document.getElementById('weeklyView').classList.add('hidden');
+            document.getElementById('monthlyView').classList.add('hidden');
+
+            if (view === 'list') {
+                document.getElementById('listView').classList.remove('hidden');
+            } else if (view === 'weekly') {
+                renderWeeklyReport();
+            } else if (view === 'monthly') {
+                renderMonthlyReport();
+            }
+        }
+
+        function getWeekStart(date) {
+            const d = new Date(date);
+            const day = d.getDay();
+            const diff = d.getDate() - day + (day === 0 ? -6 : 1);
+            d.setDate(diff);
+            return d.toISOString().slice(0, 10);
+        }
+
+        function getWeekEnd(weekStart) {
+            const d = new Date(weekStart);
+            d.setDate(d.getDate() + 6);
+            return d.toISOString().slice(0, 10);
+        }
+
+        function changeWeek(direction) {
+            const d = new Date(currentWeek);
+            d.setDate(d.getDate() + (direction * 7));
+            currentWeek = d.toISOString().slice(0, 10);
+            renderWeeklyReport();
+        }
+
+        function generateReport(reportEntries) {
+            if (reportEntries.length === 0) return null;
+
+            const total = reportEntries.length;
+            const avgIntensity = (reportEntries.reduce((sum, e) => sum + e.intensity, 0) / total).toFixed(1);
+            
+            const locationCount = {};
+            reportEntries.forEach(e => {
+                e.location.forEach(loc => {
+                    locationCount[loc] = (locationCount[loc] || 0) + 1;
+                });
+            });
+
+            const hourCount = {};
+            reportEntries.forEach(e => {
+                const hour = parseInt(e.time.split(':')[0]);
+                const period = hour < 6 ? 'Madrugada (0-6h)' : hour < 12 ? 'Manhã (6-12h)' : hour < 18 ? 'Tarde (12-18h)' : 'Noite (18-24h)';
+                hourCount[period] = (hourCount[period] || 0) + 1;
+            });
+
+            const sleepData = reportEntries.filter(e => e.sleepHours);
+            const avgSleep = sleepData.length > 0 ? (sleepData.reduce((sum, e) => sum + parseFloat(e.sleepHours), 0) / sleepData.length).toFixed(1) : 'N/A';
+
+            return { total, avgIntensity, locationCount, hourCount, avgSleep };
+        }
+
+        function renderWeeklyReport() {
+            const weekEnd = getWeekEnd(currentWeek);
+            const weekEntries = entries.filter(e => e.date >= currentWeek && e.date <= weekEnd);
+            const report = generateReport(weekEntries);
+
+            const view = document.getElementById('weeklyView');
+            view.classList.remove('hidden');
+
+            const weekStartDate = new Date(currentWeek).toLocaleDateString('pt-PT', {day:'numeric',month:'long'});
+            const weekEndDate = new Date(weekEnd).toLocaleDateString('pt-PT', {day:'numeric',month:'long',year:'numeric'});
+
+            if (!report) {
+                view.innerHTML = `
+                    <div class="week-nav">
+                        <button class="btn btn-secondary" onclick="changeWeek(-1)">← Anterior</button>
+                        <div class="center">
+                            <div style="font-size:0.9rem;color:#6b7280;">Semana de</div>
+                            <div style="font-weight:500;">${weekStartDate} - ${weekEndDate}</div>
+                        </div>
+                        <button class="btn btn-secondary" onclick="changeWeek(1)">Próxima →</button>
+                    </div>
+                    <div class="empty-state"><p>Sem registos nesta semana</p></div>
+                `;
+                return;
+            }
+
+            view.innerHTML = `
+                <div class="week-nav">
+                    <button class="btn btn-secondary" onclick="changeWeek(-1)">← Anterior</button>
+                    <div class="center">
+                        <div style="font-size:0.9rem;color:#6b7280;">Semana de</div>
+                        <div style="font-weight:500;">${weekStartDate} - ${weekEndDate}</div>
+                    </div>
+                    <button class="btn btn-secondary" onclick="changeWeek(1)">Próxima →</button>
+                    <button class="btn btn-primary" onclick="exportWeeklyPDF()">📄 PDF</button>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value">${report.total}</div>
+                        <div class="stat-label">Total de Cefaleias</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${report.avgIntensity}/10</div>
+                        <div class="stat-label">Intensidade Média</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${report.avgSleep}h</div>
+                        <div class="stat-label">Média de Sono</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom:1rem;">Padrão Horário</h3>
+                    <div class="bar-chart">
+                        ${Object.entries(report.hourCount).sort((a,b)=>b[1]-a[1]).map(([period, count]) => `
+                            <div class="bar-item">
+                                <div class="bar-label">
+                                    <span>${period}</span>
+                                    <span>${count} cefaleias</span>
+                                </div>
+                                <div class="bar-bg">
+                                    <div class="bar-fill" style="width:${(count/report.total)*100}%"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom:1rem;">Localizações Mais Comuns</h3>
+                    <div class="bar-chart">
+                        ${Object.entries(report.locationCount).sort((a,b)=>b[1]-a[1]).map(([loc, count]) => `
+                            <div class="bar-item">
+                                <div class="bar-label">
+                                    <span>${loc}</span>
+                                    <span>${count} vezes</span>
+                                </div>
+                                <div class="bar-bg">
+                                    <div class="bar-fill" style="width:${(count/report.total)*100}%"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function renderMonthlyReport() {
+            const monthEntries = entries.filter(e => e.date.startsWith(currentMonth));
+            const report = generateReport(monthEntries);
+
+            const view = document.getElementById('monthlyView');
+            view.classList.remove('hidden');
+
+            const monthName = new Date(currentMonth + '-01').toLocaleDateString('pt-PT', {month:'long',year:'numeric'});
+
+            if (!report) {
+                view.innerHTML = `
+                    <div style="display:flex;gap:1rem;margin-bottom:1.5rem;align-items:center;">
+                        <input type="month" value="${currentMonth}" onchange="currentMonth=this.value;renderMonthlyReport()" 
+                            style="padding:0.75rem;border:1px solid #d1d5db;border-radius:0.5rem;">
+                    </div>
+                    <div class="empty-state"><p>Sem registos neste mês</p></div>
+                `;
+                return;
+            }
+
+            view.innerHTML = `
+                <div style="display:flex;gap:1rem;margin-bottom:1.5rem;align-items:center;flex-wrap:wrap;">
+                    <input type="month" value="${currentMonth}" onchange="currentMonth=this.value;renderMonthlyReport()" 
+                        style="padding:0.75rem;border:1px solid #d1d5db;border-radius:0.5rem;">
+                    <button class="btn btn-primary" onclick="exportMonthlyPDF()">📄 Exportar PDF</button>
+                </div>
+
+                <div class="stats">
+                    <div class="stat-card">
+                        <div class="stat-value">${report.total}</div>
+                        <div class="stat-label">Total de Cefaleias</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${report.avgIntensity}/10</div>
+                        <div class="stat-label">Intensidade Média</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value">${report.avgSleep}h</div>
+                        <div class="stat-label">Média de Sono</div>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom:1rem;">Padrão Horário</h3>
+                    <div class="bar-chart">
+                        ${Object.entries(report.hourCount).sort((a,b)=>b[1]-a[1]).map(([period, count]) => `
+                            <div class="bar-item">
+                                <div class="bar-label">
+                                    <span>${period}</span>
+                                    <span>${count} cefaleias</span>
+                                </div>
+                                <div class="bar-bg">
+                                    <div class="bar-fill" style="width:${(count/report.total)*100}%"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+
+                <div class="card">
+                    <h3 style="margin-bottom:1rem;">Localizações Mais Comuns</h3>
+                    <div class="bar-chart">
+                        ${Object.entries(report.locationCount).sort((a,b)=>b[1]-a[1]).map(([loc, count]) => `
+                            <div class="bar-item">
+                                <div class="bar-label">
+                                    <span>${loc}</span>
+                                    <span>${count} vezes</span>
+                                </div>
+                                <div class="bar-bg">
+                                    <div class="bar-fill" style="width:${(count/report.total)*100}%"></div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `;
+        }
+
+        function exportWeeklyPDF() {
+            const weekEnd = getWeekEnd(currentWeek);
+            const weekEntries = entries.filter(e => e.date >= currentWeek && e.date <= weekEnd);
+            const report = generateReport(weekEntries);
+            if (!report) return;
+
+            const weekStartDate = new Date(currentWeek).toLocaleDateString('pt-PT', {day:'numeric',month:'long',year:'numeric'});
+            const weekEndDate = new Date(weekEnd).toLocaleDateString('pt-PT', {day:'numeric',month:'long',year:'numeric'});
+
+            const html = generatePDFHTML(`Relatório Semanal de Cefaleias - ${weekStartDate} a ${weekEndDate}`, report, weekEntries);
+            downloadHTML(html, `relatorio-semanal-${currentWeek}.html`);
+        }
+
+        function exportMonthlyPDF() {
+            const monthEntries = entries.filter(e => e.date.startsWith(currentMonth));
+            const report = generateReport(monthEntries);
+            if (!report) return;
+
+            const monthName = new Date(currentMonth + '-01').toLocaleDateString('pt-PT', {month:'long',year:'numeric'});
+            const html = generatePDFHTML(`Relatório de Cefaleias - ${monthName}`, report, monthEntries);
+            downloadHTML(html, `relatorio-cefaleias-${currentMonth}.html`);
+        }
+
+        function generatePDFHTML(title, report, reportEntries) {
+            return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><style>
+body{font-family:Arial,sans-serif;padding:40px;color:#333}
+h1{color:#1f2937;border-bottom:3px solid #1f2937;padding-bottom:10px}
+h2{color:#374151;margin-top:30px}
+.summary{background:#f3f4f6;padding:20px;border-radius:8px;margin:20px 0}
+.stat{margin:10px 0}.stat-label{font-weight:bold;color:#4b5563}
+.entry{border:1px solid #e5e7eb;padding:15px;margin:15px 0;border-radius:8px}
+.entry-header{font-weight:bold;color:#1f2937;margin-bottom:10px}
+table{width:100%;border-collapse:collapse;margin:15px 0}
+th,td{padding:8px;text-align:left;border-bottom:1px solid #e5e7eb}
+th{background:#f9fafb;font-weight:bold}
+</style></head><body>
+<h1>${title}</h1>
+<div class="summary">
+<h2>Resumo Estatístico</h2>
+<div class="stat"><span class="stat-label">Total:</span> ${report.total}</div>
+<div class="stat"><span class="stat-label">Intensidade Média:</span> ${report.avgIntensity}/10</div>
+<div class="stat"><span class="stat-label">Média de Sono:</span> ${report.avgSleep}h</div>
+</div>
+<h2>Padrão Horário</h2>
+<table><tr><th>Período</th><th>Frequência</th></tr>
+${Object.entries(report.hourCount).sort((a,b)=>b[1]-a[1]).map(([period,count])=>`<tr><td>${period}</td><td>${count}</td></tr>`).join('')}
+</table>
+<h2>Localizações Mais Comuns</h2>
+<table><tr><th>Localização</th><th>Frequência</th></tr>
+${Object.entries(report.locationCount).sort((a,b)=>b[1]-a[1]).map(([loc,count])=>`<tr><td>${loc}</td><td>${count}</td></tr>`).join('')}
+</table>
+<h2>Registos Detalhados</h2>
+${reportEntries.map(e=>`<div class="entry">
+<div class="entry-header">${new Date(e.date).toLocaleDateString('pt-PT')} às ${e.time}</div>
+<div><strong>Localização:</strong> ${e.location.join(', ')}</div>
+<div><strong>Intensidade:</strong> ${e.intensity}/10 (${getIntensityLabel(e.intensity)})</div>
+${e.sleepHours?`<div><strong>Sono:</strong> ${e.sleepHours}h</div>`:''}
+${e.duration?`<div><strong>Duração:</strong> ${e.duration}</div>`:''}
+${e.medications?`<div><strong>Medicamentos:</strong> ${e.medications}</div>`:''}
+${e.symptoms.length>0?`<div><strong>Sintomas:</strong> ${e.symptoms.join(', ')}</div>`:''}
+${e.reliefFactors?`<div><strong>Alívio:</strong> ${e.reliefFactors}</div>`:''}
+${e.aggravatingFactors?`<div><strong>Agravamento:</strong> ${e.aggravatingFactors}</div>`:''}
+${e.notes?`<div><strong>Notas:</strong> ${e.notes}</div>`:''}
+</div>`).join('')}
+</body></html>`;
+        }
+
+        function downloadHTML(html, filename) {
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        init();
+    </script>
+</body>
+</html>
